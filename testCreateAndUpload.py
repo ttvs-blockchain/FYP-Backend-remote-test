@@ -56,13 +56,20 @@ def binary_to_dict(the_binary):
 
 
 def create_random_input():
-    countryID = random.choice(string.ascii_uppercase) + \
-        str(random.randint(100000, 999999)) + \
-        "("+str(random.randint(0, 9))+")"
+    countryID = ""
+        
+    if random.randint(0,1) == 1:
+        countryID = "1:" + random.choice(string.ascii_uppercase) + \
+            str(random.randint(100000, 999999)) + \
+            "("+str(random.randint(0, 9))+")"
+    else:
+        countryID = "0:" + random.choice(string.ascii_uppercase) + \
+            str(random.randint(10000000, 99999999))
     fake = Faker()
+    sysID = ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(28))
     personalInfo = {
 
-        "sysID": ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(28)),
+        "sysID": sysID,
         "name": fake.name(),
         "countryCode": fake.country_code(representation="alpha-2"),
         "countryID": countryID,
@@ -74,12 +81,12 @@ def create_random_input():
 
     inputInfo = {
         "CertDetail": {
-            "PersonSysID": countryID,
+            "PersonSysID": sysID,
             "Name": fake.first_name()+"Vac",
             "Brand": fake.company(),
             "NumOfDose": str(random.randint(1, 9)),
             "Time": str(fake.date_time_this_year()),
-            "Issuer": fake.name()+" Issue"
+            "Issuer": fake.company() + "test/vac center"
         },
         "PersonInfoHash": personHash,
         "Key": ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(random.randint(4, 8)))
