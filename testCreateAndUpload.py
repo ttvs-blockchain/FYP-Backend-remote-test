@@ -110,17 +110,18 @@ def main():
             inputInfo = create_random_input()
             post_fields = json.dumps(inputInfo)
 
-            log_server.info(post_fields)
-
+            log_server.info(
+                "size is %d, trial no. is %d, req is %s", size, trial, post_fields)
             response = requests.post(URL_CREATE_ASSET, data=post_fields)
 
             log_server.info(
-                "size is %d, trial no. is %d, data is %s", size, trial, post_fields)
-            log_server.info("size is %d, trial no. is %d, data is%s",
+                "size is %d, trial no. is %d, rsp is %s", size, trial, response.text)
+            
+            log_server.info("size is %d, trial no. is %d, time taken is %s",
                             size, trial, response.elapsed.total_seconds())
             timeArray.append(response.elapsed.total_seconds())
 
-        log_server.info("size is %d, data is%s", size,  timeArray)
+        log_server.info("size is %d, timeArray is %s", size,  timeArray)
 
         if(len(timeArray) == 0):
             log_e2e_time.warning("no item in time array")
