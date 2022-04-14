@@ -7,7 +7,7 @@ This is a Python app to test backend API for the final year project [FYP-Backend
 To start the test, clone this repo, run the following code.
 
 ```{python}
-pip3 install -r requirements
+pip3 install -r requirements.txt
 ```
 
 ## Test
@@ -21,6 +21,9 @@ Ask the host to provide IP. Modify IP_ADDRESS in ./testCreateAndUpload.py. Then 
 ```{python}
 python3 testCreateAndUpload.py
 ```
+
+testing for verification will be updated later
+
 
 ## Plot
 
