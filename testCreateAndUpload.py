@@ -11,10 +11,10 @@ from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
 
-TRIAL_NUM = 1
+TRIAL_NUM = 2
 
 ######### ask host to provide ip ############
-IP_ADDRESS = "125.59.138.87"
+IP_ADDRESS = ""
 #############################################
 
 FOLDER_PATH = TODAY + "-trial-" + str(TRIAL_NUM)
