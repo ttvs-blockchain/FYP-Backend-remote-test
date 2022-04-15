@@ -11,13 +11,13 @@ from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
 
-TRIALNUM = 1
+TRIAL_NUM = 1
 
 ######### ask host to provide ip ############
-IP_ADDRESS = ""
+IP_ADDRESS = "125.59.138.87"
 #############################################
 
-FOLDER_PATH = TODAY + "trial-" + TRIALNUM
+FOLDER_PATH = TODAY + "-trial-" + str(TRIAL_NUM)
 
 LOG_FILE_SERVER = FOLDER_PATH + "/server.log"
 LOG_FILE_E2ETIME = FOLDER_PATH + "/e2etime.log"
