@@ -11,7 +11,7 @@ from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
 
-TRIAL_NUM = 2
+TRIAL_NUM = 3
 
 ######### ask host to provide ip ############
 IP_ADDRESS = ""
