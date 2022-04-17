@@ -13,8 +13,13 @@ import os
 from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
+DSN = json.loads(open('config.json', "r").read())
 
+
+######### configure test ############
 TRIALNUM = 1
+SIZEARRAY = [0]
+######### configure test ############
 
 ######### ask host to provide ip ############
 IP_ADDRESS = "localhost"
@@ -102,8 +107,11 @@ def create_random_input():
 
 
 def readRow(id):
-    db = MySQLdb.connect("167.179.77.244", "tommy",
-                         "mysql123456", "certificate", charset='utf8')
+    db = MySQLdb.connect(DSN["ip"],
+                         DSN["name"],
+                         DSN["pwd"],
+                         DSN["db"],
+                         charset=DSN["charset"])
     cursor = db.cursor()
 
     sql = "SELECT certID, globalRootID, merkleTreePath, merkleTreeIndexes FROM localCertificate  WHERE personSysID = \"%s\" ;" % id
@@ -138,9 +146,7 @@ def main():
     log_upload = setup_logger('log_upload', LOG_FILE_UPLOAD)
     log_verify = setup_logger('log_verify', LOG_FILE_VERIFY)
 
-    sizeArrray = [2]
-
-    for size in sizeArrray:
+    for size in SIZEARRAY:
 
         testSizeArray = pow(2, size)
 
