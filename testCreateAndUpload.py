@@ -13,12 +13,14 @@ import os
 from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
-DSN = json.loads(open('config.json', "r").read())
 
+######### ask host to provide config.json ###
+DSN = json.loads(open('config.json', "r").read())
+#############################################
 
 ######### configure test ############
 TRIALNUM = 1
-SIZEARRAY = [0]
+SIZEARRAY = [4,5,6,7,8,9,10]
 ######### configure test ############
 
 ######### ask host to provide ip ############
@@ -118,7 +120,6 @@ def readRow(id):
     try:
         cursor.execute(sql)
         results = cursor.fetchall()
-        print("query result is ", results)
         for row in results:
             certID = row[0]
             globalRootID = row[1]
