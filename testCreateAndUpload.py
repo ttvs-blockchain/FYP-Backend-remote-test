@@ -6,7 +6,10 @@ from faker import Faker
 import json
 import logging
 import requests
-
+import MySQLdb
+import traceback
+import ast
+import os
 from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
@@ -14,17 +17,20 @@ TODAY = date.today().strftime("%d-%m-%Y")
 TRIALNUM = 1
 
 ######### ask host to provide ip ############
-IP_ADDRESS = ""
+IP_ADDRESS = "localhost"
 #############################################
 
-FOLDER_PATH = TODAY + "trial-" + TRIALNUM
+FOLDER_PATH = TODAY + "-trial-" + str(TRIALNUM)
+
 
 LOG_FILE_SERVER = FOLDER_PATH + "/server.log"
 LOG_FILE_E2ETIME = FOLDER_PATH + "/e2etime.log"
 LOG_FILE_UPLOAD = FOLDER_PATH + "/upload.log"
+LOG_FILE_VERIFY = FOLDER_PATH + "/verify.log"
 
 URL_CREATE_ASSET = "http://"+IP_ADDRESS+":8080/CreateAsset"
 URL_UPLOAD_ASSET = "http://"+IP_ADDRESS+":8080/Upload"
+URL_VERIFY_ASSET = "http://"+IP_ADDRESS+":8081/VerifyPath"
 
 
 def setup_logger(logger_name, log_file, level=logging.INFO):
@@ -57,8 +63,8 @@ def binary_to_dict(the_binary):
 
 def create_random_input():
     countryID = ""
-        
-    if random.randint(0,1) == 1:
+
+    if random.randint(0, 1) == 1:
         countryID = "1:" + random.choice(string.ascii_uppercase) + \
             str(random.randint(100000, 999999)) + \
             "("+str(random.randint(0, 9))+")"
@@ -66,7 +72,8 @@ def create_random_input():
         countryID = "0:" + random.choice(string.ascii_uppercase) + \
             str(random.randint(10000000, 99999999))
     fake = Faker()
-    sysID = ''.join(random.SystemRandom().choice(string.ascii_letters + string.digits) for _ in range(28))
+    sysID = ''.join(random.SystemRandom().choice(
+        string.ascii_letters + string.digits) for _ in range(28))
     personalInfo = {
 
         "sysID": sysID,
@@ -85,7 +92,7 @@ def create_random_input():
             "Name": fake.first_name()+"Vac",
             "Brand": fake.company(),
             "NumOfDose": str(random.randint(1, 9)),
-            "Time": str(fake.date_time_this_year()),
+            "Time": str(fake.date_time_this_year())[:16],
             "Issuer": fake.company() + "test/vac center"
         },
         "PersonInfoHash": personHash,
@@ -94,38 +101,71 @@ def create_random_input():
     return inputInfo
 
 
+def readRow(id):
+    db = MySQLdb.connect("167.179.77.244", "tommy",
+                         "mysql123456", "certificate", charset='utf8')
+    cursor = db.cursor()
+
+    sql = "SELECT certID, globalRootID, merkleTreePath, merkleTreeIndexes FROM localCertificate  WHERE personSysID = \"%s\" ;" % id
+    try:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        print("query result is ", results)
+        for row in results:
+            certID = row[0]
+            globalRootID = row[1]
+            merkleTreePath = ast.literal_eval(row[2])
+            merkleTreeIndexes = ast.literal_eval(row[3])
+            db.close()
+
+            return {"MKT": {"GlobalRootID": globalRootID,
+                            "Path": merkleTreePath,
+                            "Indexes": merkleTreeIndexes
+                            },
+                    "CertID": certID
+                    }
+    except:
+        db.close()
+        traceback.print_exc()
+        return
+
+
 def main():
+    os.mkdir(FOLDER_PATH)
 
     log_server = setup_logger('log_server', LOG_FILE_SERVER)
     log_e2e_time = setup_logger('log_e2eTime', LOG_FILE_E2ETIME)
     log_upload = setup_logger('log_upload', LOG_FILE_UPLOAD)
+    log_verify = setup_logger('log_verify', LOG_FILE_VERIFY)
 
-    sizeArrray = [4, 5, 6, 7, 8, 9, 10]
+    sizeArrray = [2]
 
     for size in sizeArrray:
 
-        trials = pow(2, size)
+        testSizeArray = pow(2, size)
 
-        log_server.info("n = %d trial start", size)
-        log_e2e_time.info("n = %d trial start", size)
-        log_upload.info("n = %d trial start", size)
+        log_server.info("n = %d start", size)
+        log_e2e_time.info("n = %d start", size)
+        log_upload.info("n = %d start", size)
+        log_verify.info("n = %d start", size)
 
         timeArray = []
-
-        for trial in range(trials):
+        inputInfoArray = []
+        for testNo in range(testSizeArray):
 
             inputInfo = create_random_input()
+            inputInfoArray.append(inputInfo)
             post_fields = json.dumps(inputInfo)
 
             log_server.info(
-                "size is %d, trial no. is %d, req is %s", size, trial, post_fields)
+                "size is %d, test no. is %d, req is %s", size, testNo, post_fields)
             response = requests.post(URL_CREATE_ASSET, data=post_fields)
 
             log_server.info(
-                "size is %d, trial no. is %d, rsp is %s", size, trial, response.text)
-            
-            log_server.info("size is %d, trial no. is %d, time taken is %s",
-                            size, trial, response.elapsed.total_seconds())
+                "size is %d, test no. is %d, rsp is %s", size, testNo, response.text)
+
+            log_server.info("size is %d, test no. is %d, time taken is %s",
+                            size, testNo, response.elapsed.total_seconds())
             timeArray.append(response.elapsed.total_seconds())
 
         log_server.info("size is %d, timeArray is %s", size,  timeArray)
@@ -134,12 +174,42 @@ def main():
             log_e2e_time.warning("no item in time array")
         else:
             avg = sum(timeArray)/len(timeArray)
-            log_e2e_time.info("n = %d trial. The average is %f", size, avg)
+            log_e2e_time.info("n = %d. The average is %f", size, avg)
 
         # after create asset, upload to global
         response = requests.post(URL_UPLOAD_ASSET)
-        log_upload.info("n = %d trial for upload, time needed is %f",
+        log_upload.info("n = %d for upload, time needed is %f",
                         size, response.elapsed.total_seconds())
+
+        verifyTimeArray = []
+        # after upload, measure verify time
+        for testNo in range(testSizeArray):
+            personSysID = inputInfoArray[testNo]["CertDetail"]["PersonSysID"]
+            result = readRow(personSysID)
+            VerifyPath = result["MKT"]
+            certID = result["CertID"]
+            payload = {
+                "VerifyInputInfo": inputInfoArray[testNo],
+                "VerifyPath": VerifyPath
+            }
+            payload["VerifyInputInfo"]["CertDetail"]["CertID"] = certID
+            post_fields = json.dumps(payload)
+
+            log_server.info(
+                "size is %d, test no. is %d, verify req is %s", size, testNo, post_fields)
+            response = requests.post(URL_VERIFY_ASSET, data=post_fields)
+            log_server.info(
+                "size is %d, test no. is %d, verify rsp is %s", size, testNo, response.text)
+            verifyTimeArray.append(response.elapsed.total_seconds())
+            log_server.info("n = %d for verify, time needed is %f",
+                            size, response.elapsed.total_seconds())
+
+        if(len(verifyTimeArray) == 0):
+            log_verify.warning("no item in time array")
+        else:
+            avg = sum(verifyTimeArray)/len(verifyTimeArray)
+            log_verify.info(
+                "n = %d. The average for verify is %f", size, avg)
 
 
 if __name__ == "__main__":
