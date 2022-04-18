@@ -24,7 +24,7 @@ SIZEARRAY = [4, 5, 6, 7, 8, 9, 10]
 ######### configure test ############
 
 ######### ask host to provide ip ############
-IP_ADDRESS = "localhost"
+IP_ADDRESS = "125.59.138.87"
 #############################################
 
 FOLDER_PATH = TODAY + "-trial-" + str(TRIALNUM)
