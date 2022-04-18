@@ -39,12 +39,6 @@ URL_UPLOAD_ASSET = "http://"+IP_ADDRESS+":8080/Upload"
 URL_VERIFY_ASSET = "http://"+IP_ADDRESS+":8081/VerifyPath"
 
 
-db = MySQLdb.connect(DSN["ip"],
-                        DSN["name"],
-                        DSN["pwd"],
-                        DSN["db"],
-                        charset=DSN["charset"])
-
 def setup_logger(logger_name, log_file, level=logging.INFO):
 
     log_setup = logging.getLogger(logger_name)
@@ -114,6 +108,11 @@ def create_random_input():
 
 
 def readRow(id):
+    db = MySQLdb.connect(DSN["ip"],
+                         DSN["name"],
+                         DSN["pwd"],
+                         DSN["db"],
+                         charset=DSN["charset"])
 
     cursor = db.cursor()
 
@@ -126,6 +125,7 @@ def readRow(id):
             globalRootID = row[1]
             merkleTreePath = ast.literal_eval(row[2])
             merkleTreeIndexes = ast.literal_eval(row[3])
+            db.close()
 
             return {"MKT": {"GlobalRootID": globalRootID,
                             "Path": merkleTreePath,
@@ -134,6 +134,8 @@ def readRow(id):
                     "CertID": certID
                     }
     except:
+        db.close()
+
         traceback.print_exc()
         return
 
@@ -192,7 +194,9 @@ def main():
         for testNo in range(testSizeArray):
             personSysID = inputInfoArray[testNo]["CertDetail"]["PersonSysID"]
             result = readRow(personSysID)
+
             VerifyPath = result["MKT"]
+
             certID = result["CertID"]
             payload = {
                 "VerifyInputInfo": inputInfoArray[testNo],
@@ -217,7 +221,6 @@ def main():
             log_verify.info(
                 "n = %d. The average for verify is %f", size, avg)
 
-    db.close()
 
 if __name__ == "__main__":
     main()
