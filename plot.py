@@ -41,20 +41,30 @@ upload_log.close()
 verify_log.close()
 
 
-plt.title("issuing time diagram")
+# plt.title("issuing time diagram")
+plt.ylabel("time per certificate/second")
+plt.xlabel("number of certificate")
 plt.plot(x, e2e_time, '-o')
 plt.grid()
 plt.savefig(FOLDER_PATH + "/issuing-time-diagram.png")
 plt.close()
 
-plt.title("upload time diagram")
+# plt.title("upload time diagram")
+plt.ylabel("total time/second")
+plt.xlabel("number of certificate")
 plt.plot(x, upload_time, '-o')
 plt.grid()
 plt.savefig(FOLDER_PATH + "/upload-time-diagram.png")
 plt.close()
 
-plt.title("verify time diagram")
+# plt.title("verify time diagram")
+plt.ylabel("time per certificate/second")
+plt.xlabel("number of certificate")
 plt.plot(x, verify_time, '-o')
 plt.grid()
 plt.savefig(FOLDER_PATH + "/verify-time-diagram.png")
 plt.close()
+
+
+#### 2.0 ~ 2.X  shrink it 
+#### 
