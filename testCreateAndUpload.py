@@ -28,8 +28,8 @@ SIZEARRAY = [4,5,6,7,8,9,10]
 
 ######### ask host to provide ip and cert if self signed############
 IP_ADDRESS = "localhost"
-VERIFY_TLS_LOCAL = "./tlsCert/localServerCert.pem"
-VERIFY_TLS_GLOBAL = "./tlsCert/globalServerCert.pem"
+VERIFY_TLS_LOCAL = False
+VERIFY_TLS_GLOBAL = False
 #######################################################
 
 FOLDER_PATH = TODAY + "-trial-" + str(TRIAL_NUM)
