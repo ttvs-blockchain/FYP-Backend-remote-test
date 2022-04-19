@@ -2,6 +2,8 @@ from hashlib import sha256
 from random import random
 import string
 import random
+
+from numpy import average
 from faker import Faker
 import json
 import logging
@@ -10,6 +12,7 @@ import MySQLdb
 import traceback
 import ast
 import os
+import statistics
 from datetime import date
 
 TODAY = date.today().strftime("%d-%m-%Y")
@@ -23,21 +26,22 @@ TRIALNUM = 1
 SIZEARRAY = [4, 5, 6, 7, 8, 9, 10]
 ######### configure test ############
 
-######### ask host to provide ip ############
+######### ask host to provide ip and cert if self signed############
 IP_ADDRESS = "localhost"
-#############################################
+VERIFY_TLS_LOCAL = "./tlsCert/localServerCert.pem"
+VERIFY_TLS_GLOBAL = "./tlsCert/globalServerCert.pem"
+#######################################################
 
 FOLDER_PATH = TODAY + "-trial-" + str(TRIALNUM)
-
 
 LOG_FILE_SERVER = FOLDER_PATH + "/server.log"
 LOG_FILE_E2ETIME = FOLDER_PATH + "/e2etime.log"
 LOG_FILE_UPLOAD = FOLDER_PATH + "/upload.log"
 LOG_FILE_VERIFY = FOLDER_PATH + "/verify.log"
 
-URL_CREATE_ASSET = "http://"+IP_ADDRESS+":8080/CreateAsset"
-URL_UPLOAD_ASSET = "http://"+IP_ADDRESS+":8080/Upload"
-URL_VERIFY_ASSET = "http://"+IP_ADDRESS+":8081/VerifyPath"
+URL_CREATE_ASSET = "https://"+IP_ADDRESS+":8080/CreateAsset"
+URL_UPLOAD_ASSET = "https://"+IP_ADDRESS+":8080/Upload"
+URL_VERIFY_ASSET = "https://"+IP_ADDRESS+":8081/VerifyPath"
 
 
 def setup_logger(logger_name, log_file, level=logging.INFO):
@@ -108,13 +112,7 @@ def create_random_input():
     return inputInfo
 
 
-def readRow(id):
-    db = MySQLdb.connect(DSN["ip"],
-                         DSN["name"],
-                         DSN["pwd"],
-                         DSN["db"],
-                         charset=DSN["charset"])
-
+def readRow(id, db):
     cursor = db.cursor()
 
     sql = "SELECT certID, globalRootID, merkleTreePath, merkleTreeIndexes FROM localCertificate  WHERE personSysID = \"%s\" ;" % id
@@ -126,7 +124,7 @@ def readRow(id):
             globalRootID = row[1]
             merkleTreePath = ast.literal_eval(row[2])
             merkleTreeIndexes = ast.literal_eval(row[3])
-            db.close()
+            # db.close()
 
             return {"MKT": {"GlobalRootID": globalRootID,
                             "Path": merkleTreePath,
@@ -135,15 +133,14 @@ def readRow(id):
                     "CertID": certID
                     }
     except:
-        db.close()
-
+        # db.close()
         traceback.print_exc()
         return
 
 
 def main():
     os.mkdir(FOLDER_PATH)
-
+   
     log_server = setup_logger('log_server', LOG_FILE_SERVER)
     log_e2e_time = setup_logger('log_e2eTime', LOG_FILE_E2ETIME)
     log_upload = setup_logger('log_upload', LOG_FILE_UPLOAD)
@@ -168,7 +165,8 @@ def main():
 
             log_server.info(
                 "size is %d, test no. is %d, req is %s", size, testNo, post_fields)
-            response = requests.post(URL_CREATE_ASSET, data=post_fields)
+            response = requests.post(
+                URL_CREATE_ASSET, data=post_fields, verify=VERIFY_TLS_LOCAL)
 
             log_server.info(
                 "size is %d, test no. is %d, rsp is %s", size, testNo, response.text)
@@ -179,22 +177,27 @@ def main():
 
         log_server.info("size is %d, timeArray is %s", size,  timeArray)
 
-        if(len(timeArray) == 0):
-            log_e2e_time.warning("no item in time array")
-        else:
-            avg = sum(timeArray)/len(timeArray)
-            log_e2e_time.info("n = %d. The average is %f", size, avg)
+        avg = statistics.fmean(timeArray)
+        std = statistics.stdev(timeArray)
+      
+        log_e2e_time.info("n = %d. The average and std are %f, %f", size, avg, std)
 
         # after create asset, upload to global
-        response = requests.post(URL_UPLOAD_ASSET)
+        response = requests.post(URL_UPLOAD_ASSET, verify=VERIFY_TLS_LOCAL)
+        
         log_upload.info("n = %d for upload, time needed is %f",
                         size, response.elapsed.total_seconds())
 
         verifyTimeArray = []
         # after upload, measure verify time
+        db = MySQLdb.connect(DSN["ip"],
+                        DSN["name"],
+                        DSN["pwd"],
+                        DSN["db"],
+                        charset=DSN["charset"])
         for testNo in range(testSizeArray):
             personSysID = inputInfoArray[testNo]["CertDetail"]["PersonSysID"]
-            result = readRow(personSysID)
+            result = readRow(personSysID, db)
 
             VerifyPath = result["MKT"]
 
@@ -208,20 +211,19 @@ def main():
 
             log_server.info(
                 "size is %d, test no. is %d, verify req is %s", size, testNo, post_fields)
-            response = requests.post(URL_VERIFY_ASSET, data=post_fields)
+            response = requests.post(
+                URL_VERIFY_ASSET, data=post_fields, verify=VERIFY_TLS_GLOBAL)
             log_server.info(
                 "size is %d, test no. is %d, verify rsp is %s", size, testNo, response.text)
             verifyTimeArray.append(response.elapsed.total_seconds())
             log_server.info("n = %d for verify, time needed is %f",
                             size, response.elapsed.total_seconds())
+        db.close()
 
-        if(len(verifyTimeArray) == 0):
-            log_verify.warning("no item in time array")
-        else:
-            avg = sum(verifyTimeArray)/len(verifyTimeArray)
-            log_verify.info(
-                "n = %d. The average for verify is %f", size, avg)
-
+        avg = statistics.fmean(verifyTimeArray)
+        std = statistics.stdev(verifyTimeArray)
+        log_verify.info(
+            "n = %d. The average and std for verify are %f, %f", size, avg, std)
 
 if __name__ == "__main__":
     main()
